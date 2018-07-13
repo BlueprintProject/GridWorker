@@ -2,6 +2,7 @@ package gridworker
 
 import (
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -193,5 +194,8 @@ func (d *DistributedWorker) handleAuthMessageForConnection(m *Message, c *connec
 	c.remoteWorker = r
 	c.announceAuth()
 
-	d.remoteWorkerQueue <- r
+	go func(d *DistributedWorker, r *remoteWorker) {
+		time.Sleep(1 * time.Second)
+		d.remoteWorkerQueue <- r
+	}(d, r)
 }
