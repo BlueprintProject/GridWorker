@@ -56,11 +56,18 @@ type connection struct {
 	// related to
 	distributedWorker *DistributedWorker
 
+	// remoteWorker is the RemoteWorker object for the connection
+	// since workers can have multiple connections, this unifies each connection
+	remoteWorker *remoteWorker
+
 	// writeChan is where new messages are sent before being sent over the socket
 	writeChan chan *Message
 
 	// announcedAuth determines if the connection has sent an auth message
 	annoucedAuth bool
+
+	// outstandingMessageCount
+	outstandingMessageCount int64
 }
 
 // newConnection is called when a new socket connection is made,

@@ -31,7 +31,8 @@ func (p *processPool) newContextPool() {
 	p.contextPool = &contextPool{
 		pool: newLimitPool(contextPoolLimit, func() interface{} {
 			return &Context{
-				Response: make(chan *Message, 1),
+				Response:    make(chan *Message, 1),
+				processPool: p,
 			}
 		}),
 	}

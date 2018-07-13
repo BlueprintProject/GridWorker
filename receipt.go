@@ -20,6 +20,10 @@ type Reciept struct {
 
 	// processPool is a reference to the shared process pool
 	processPool *processPool
+
+	// remoteWorker is a reference to the remoteWorker the task is
+	// being performed on (if any)
+	remoteWorker *remoteWorker
 }
 
 // taskRecieptPool is a pool used to quickly get TaskReciept objects

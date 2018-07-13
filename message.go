@@ -15,6 +15,11 @@ type Message struct {
 	messagePool *messagePool
 }
 
+// isCtrl determines if a message is a command message or a standard control message
+func (m *Message) isCtrl() bool {
+	return m.Command == cmdAUTH || m.Command == cmdRSP
+}
+
 // messagePool is the general data representation for the message pool
 type messagePool struct {
 	pool        *refillPool

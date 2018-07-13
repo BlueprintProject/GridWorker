@@ -28,3 +28,6 @@ const maxConnections = 1024
 
 // The maximum number of workers that a distributed worker may have
 const maxWorkers = 1024
+
+// The maximum number of outstanding messages allowed for a single worker
+const maximumOutstandingMessages = 512

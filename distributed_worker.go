@@ -17,8 +17,10 @@ type DistributedWorker struct {
 
 	taskRegistry map[string]*Task
 
-	workerQueue     chan *Worker
-	connectionQueue chan *connection
+	workerQueue       chan *Worker
+	remoteWorkerQueue chan *remoteWorker
+
+	remoteWorkerRegistry map[string]*remoteWorker
 
 	upgrader websocket.Upgrader
 }
@@ -30,8 +32,9 @@ func NewDistributedWorker() *DistributedWorker {
 	w.processPool = newProcessPool()
 	w.id = w.processPool.guidPool.get().(string)
 	w.refMap = &sync.Map{}
+	w.remoteWorkerRegistry = map[string]*remoteWorker{}
 	w.workerQueue = make(chan *Worker, maxWorkers)
-	w.connectionQueue = make(chan *connection, maxConnections)
+	w.remoteWorkerQueue = make(chan *remoteWorker, maxWorkers)
 	w.taskRegistry = map[string]*Task{}
 	w.upgrader = websocket.Upgrader{}
 	return &w
@@ -66,7 +69,10 @@ func (d DistributedWorker) Run(m *Message) *Reciept {
 	m.ReferenceID = r.ReferenceID
 
 	d.registerTaskRecieptForRef(r, m.ReferenceID)
-	d.send(m)
+	rw := d.getRemoteWorker()
+	r.remoteWorker = rw
+
+	rw.send(m)
 
 	return r
 }
@@ -89,22 +95,21 @@ func (d *DistributedWorker) newWorker() *Worker {
 	return &w
 }
 
-// getConnection gets a connection out of the connection queue
-func (d *DistributedWorker) getConnection() *connection {
-	c := <-d.connectionQueue
-	d.connectionQueue <- c
-
-	return c
-}
-
-// send will send a message object to a connection in the pool
-func (d *DistributedWorker) send(m *Message) {
-	d.getConnection().writeChan <- m
-}
-
 // getLocalWorker gets a worker for the workerQueue
 func (d *DistributedWorker) getLocalWorker() *Worker {
 	return <-d.workerQueue
+}
+
+// getRemoteWorker gets a remote worker for the workerQueue
+func (d *DistributedWorker) getRemoteWorker() *remoteWorker {
+	r := <-d.remoteWorkerQueue
+	r.inQueue = false
+	return r
+}
+
+// send will send a message to a remote worker
+func (d *DistributedWorker) send(m *Message) {
+	d.getRemoteWorker().send(m)
 }
 
 // listenToReceipt waits for a response from a worker reciept and sends it to
@@ -112,7 +117,7 @@ func (d *DistributedWorker) getLocalWorker() *Worker {
 func (d *DistributedWorker) listenToReceipt(r *Reciept, localWorker *Worker) {
 	for {
 		m := <-r.Response
-		d.send(m)
+		r.remoteWorker.send(m)
 
 		if m.Done {
 			break
@@ -137,16 +142,29 @@ func (d *DistributedWorker) handleMessageForConnection(m *Message, c *connection
 		return
 	}
 
-	d.handleMessage(m)
+	d.handleMessage(m, c.remoteWorker)
 }
 
 // handleMessage processes and dispatches messages from the sockets
-func (d *DistributedWorker) handleMessage(m *Message) {
+func (d *DistributedWorker) handleMessage(m *Message, rem *remoteWorker) {
 	if m.Command == cmdRSP {
-		r, ok := d.refMap.Load(m.ReferenceID)
+		rem.outstandingMessages--
+		if !rem.inQueue && rem.outstandingMessages < maximumOutstandingMessages {
+			rem.inQueue = true
+			d.remoteWorkerQueue <- rem
+		}
 
-		if ok {
-			r.(*Reciept).Response <- m
+		rI, ok := d.refMap.Load(m.ReferenceID)
+
+		if !ok {
+			return
+		}
+
+		r := rI.(*Reciept)
+
+		r.Response <- m
+
+		if m.Done {
 			d.refMap.Delete(m.ReferenceID)
 		}
 
@@ -156,13 +174,24 @@ func (d *DistributedWorker) handleMessage(m *Message) {
 	if d.hasLocalWorkers == true {
 		localWorker := d.getLocalWorker()
 		r := localWorker.Run(m)
+		r.remoteWorker = rem
 		d.listenToReceipt(r, localWorker)
 	}
 }
 
 // handleAuthMessageForConnection handles actual auth commands
 func (d *DistributedWorker) handleAuthMessageForConnection(m *Message, c *connection) {
-	d.id = m.GetString("id")
-	d.connectionQueue <- c
+	id := m.GetString("id")
+	r := d.remoteWorkerRegistry[id]
+
+	if r == nil {
+		r = d.newRemoteWorker()
+		d.remoteWorkerRegistry[id] = r
+	}
+
+	r.connectionQueue <- c
+	c.remoteWorker = r
 	c.announceAuth()
+
+	d.remoteWorkerQueue <- r
 }
