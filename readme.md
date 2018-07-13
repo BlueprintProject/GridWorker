@@ -30,4 +30,6 @@ When in doubt, test, benchmark, analyze.
 
 ## Examples
 
-Coming soon.
+Examples can be found on our Wiki.
+
+https://github.com/BlueprintProject/GridWorker/wiki/Examples
