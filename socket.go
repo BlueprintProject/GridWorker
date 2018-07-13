@@ -96,7 +96,7 @@ func (w *DistributedWorker) newConnection(conn *websocket.Conn) *connection {
 	c := &connection{
 		conn:              conn,
 		distributedWorker: w,
-		writeChan:         make(chan *Message, 25),
+		writeChan:         make(chan *Message, messageBufferSize),
 	}
 
 	return c

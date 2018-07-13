@@ -51,3 +51,6 @@ const maxWorkers = 1024
 
 // The maximum number of outstanding messages allowed for a single worker
 const maximumOutstandingMessages = 512
+
+// The size of the message buffer used on remote connections
+const messageBufferSize = 1024
