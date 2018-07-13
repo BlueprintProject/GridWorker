@@ -1,0 +1,43 @@
+syntax = "proto2";
+package gridworker;
+
+enum DynamicTypeType {
+    int = 0;
+    float = 1;
+    string = 2;
+    bytes = 3;
+    bool = 4;
+    json_slice = 5;
+    json_map = 6;
+}
+
+message DynamicType {
+    required DynamicTypeType type = 1;
+    optional int64 int = 2;
+    optional double float = 3;
+    optional string str = 4;
+    optional bytes bytes = 5;
+    optional bool bool = 6;
+}
+
+message MessageProto {
+    optional string referenceID = 1;
+    optional string Command = 2;
+    optional bool done = 3;
+
+    map<string, DynamicType> arguments = 4;
+}
+
+/*
+// Message is the object that communications are sent through
+type Message struct {
+	Command string `json:"cmd,omitempty"`
+	done    bool   `json:"fin,omitempty"`
+
+	arguments messageContent `json:"arg,omitempty"`
+
+	referenceID string `json:"ref,omitempty"`
+
+	messagePool *messagePool
+}
+*/

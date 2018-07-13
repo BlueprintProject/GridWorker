@@ -43,7 +43,7 @@ func NewWorker() *Worker {
 // NewMessage creates a new message object to be sent to the worker
 func (w *Worker) NewMessage() *Message {
 	message := w.processPool.messagePool.NewMessage()
-	message.Arguments = w.processPool.messagePool.getMessageContentItem()
+	message.arguments = w.processPool.messagePool.getMessageContentItem()
 	return message
 }
 

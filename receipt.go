@@ -31,8 +31,8 @@ type Reciept struct {
 	// Response is the channnel where your results will come through
 	Response chan *Message
 
-	// ReferenceID is the GUID assigned to the task
-	ReferenceID string
+	// referenceID is the GUID assigned to the task
+	referenceID string
 
 	// closed determines if more messages will be coming on the
 	// response queue
@@ -73,7 +73,7 @@ func (p *processPool) newTaskRecieptPool() {
 // newTaskReciept gets a fresh task reciept out of the pool
 func (t *taskRecieptPool) newTaskReciept() *Reciept {
 	r := t.pool.Get().(*Reciept)
-	r.ReferenceID = t.processPool.guidPool.get().(string)
+	r.referenceID = t.processPool.guidPool.get().(string)
 	return r
 }
 
@@ -96,7 +96,7 @@ func (t *Reciept) listenForResponse(c *Context) {
 		m := <-c.Response
 		t.Response <- m
 
-		if m.Done {
+		if m.done {
 			break
 		}
 	}

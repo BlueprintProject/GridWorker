@@ -20,17 +20,19 @@
 
 package gridworker
 
+import "github.com/golang/protobuf/proto"
+
 // messageContent is the base object inside of a message
-type messageContent map[string]interface{}
+type messageContent map[string]*DynamicType
 
 // Message is the object that communications are sent through
 type Message struct {
-	Command string `json:"cmd,omitempty"`
-	Done    bool   `json:"fin,omitempty"`
+	Command string
 
-	Arguments messageContent `json:"arg,omitempty"`
+	arguments map[string]*DynamicType
 
-	ReferenceID string `json:"ref,omitempty"`
+	done        bool
+	referenceID string
 
 	messagePool *messagePool
 }
@@ -42,8 +44,9 @@ func (m *Message) isCtrl() bool {
 
 // messagePool is the general data representation for the message pool
 type messagePool struct {
-	pool        *refillPool
-	contentPool *refillPool
+	pool             *refillPool
+	messageProtoPool *refillPool
+	contentPool      *refillPool
 }
 
 // newMessagePool creates a new message pool object
@@ -52,6 +55,7 @@ func (p *processPool) newMessagePool() {
 
 	mp.pool = newMessageSyncPool(mp)
 	mp.contentPool = newMessageContentSyncPool()
+	mp.messageProtoPool = newMessageProtoPool()
 
 	p.messagePool = mp
 }
@@ -62,8 +66,16 @@ func newMessageSyncPool(p *messagePool) *refillPool {
 	return newRefillPool(messagePoolLimit, func() interface{} {
 		return &Message{
 			messagePool: p,
-			Done:        true,
+			done:        true,
 		}
+	})
+}
+
+// NewMessageProtoPool gives us a pool for messages props to prevent allocs
+// on the fly
+func newMessageProtoPool() *refillPool {
+	return newRefillPool(messagePoolLimit, func() interface{} {
+		return &MessageProto{}
 	})
 }
 
@@ -97,9 +109,9 @@ func (m *messagePool) NewMessage() *Message {
 // and sets it with a content object
 func (c *Context) NewMessage() *Message {
 	message := c.processPool.messagePool.NewMessage()
-	message.Arguments = c.processPool.messagePool.getMessageContentItem()
+	message.arguments = c.processPool.messagePool.getMessageContentItem()
 	message.Command = cmdRSP
-	message.ReferenceID = c.input.ReferenceID
+	message.referenceID = c.input.referenceID
 
 	return message
 }
@@ -107,5 +119,20 @@ func (c *Context) NewMessage() *Message {
 // SetMore tells the rest fo the stack that there are more messages coming
 // This is used for multi message worker responses
 func (m *Message) SetMore(more bool) {
-	m.Done = !more
+	m.done = !more
+}
+
+// fromProto converts a messageproto type to message
+func (m *Message) fromProto(mp *MessageProto) {
+	m.Command = mp.GetCommand()
+	m.done = mp.GetDone()
+	m.referenceID = mp.GetReferenceID()
+	m.arguments = mp.GetArguments()
+}
+
+func (m *Message) toProto(mp *MessageProto) {
+	mp.Command = proto.String(m.Command)
+	mp.Done = proto.Bool(m.done)
+	mp.ReferenceID = proto.String(m.referenceID)
+	mp.Arguments = m.arguments
 }

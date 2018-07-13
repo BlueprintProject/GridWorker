@@ -79,7 +79,7 @@ func NewDistributedWorkerWithLocalWorkers(numberOfLocalWorkers int) *Distributed
 // NewMessage creates a new message to send to the worker
 func (d DistributedWorker) NewMessage() *Message {
 	message := d.processPool.messagePool.NewMessage()
-	message.Arguments = d.processPool.messagePool.getMessageContentItem()
+	message.arguments = d.processPool.messagePool.getMessageContentItem()
 	return message
 }
 
@@ -87,9 +87,9 @@ func (d DistributedWorker) NewMessage() *Message {
 func (d DistributedWorker) Run(m *Message) *Reciept {
 	r := d.processPool.taskRecieptPool.newTaskReciept()
 
-	m.ReferenceID = r.ReferenceID
+	m.referenceID = r.referenceID
 
-	d.registerTaskRecieptForRef(r, m.ReferenceID)
+	d.registerTaskRecieptForRef(r, m.referenceID)
 	rw := d.getRemoteWorker()
 	r.remoteWorker = rw
 
@@ -140,7 +140,7 @@ func (d *DistributedWorker) listenToReceipt(r *Reciept, localWorker *Worker) {
 		m := <-r.Response
 		r.remoteWorker.send(m)
 
-		if m.Done {
+		if m.done {
 			break
 		}
 	}
@@ -175,7 +175,7 @@ func (d *DistributedWorker) handleMessage(m *Message, rem *remoteWorker) {
 			d.remoteWorkerQueue <- rem
 		}
 
-		rI, ok := d.refMap.Load(m.ReferenceID)
+		rI, ok := d.refMap.Load(m.referenceID)
 
 		if !ok {
 			return
@@ -185,8 +185,8 @@ func (d *DistributedWorker) handleMessage(m *Message, rem *remoteWorker) {
 
 		r.Response <- m
 
-		if m.Done {
-			d.refMap.Delete(m.ReferenceID)
+		if m.done {
+			d.refMap.Delete(m.referenceID)
 		}
 
 		return

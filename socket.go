@@ -21,12 +21,13 @@
 package gridworker
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/golang/protobuf/proto"
 
 	"github.com/gorilla/websocket"
 )
@@ -130,7 +131,9 @@ func (c *connection) listen() {
 func (c *connection) listenForWrite() {
 	for {
 		m := <-c.writeChan
-		b, _ := json.Marshal(m)
+		mp := c.distributedWorker.processPool.messagePool.messageProtoPool.get().(*MessageProto)
+		m.toProto(mp)
+		b, _ := proto.Marshal(mp)
 		c.conn.WriteMessage(websocket.BinaryMessage, b)
 	}
 }
@@ -178,7 +181,11 @@ func (c *connection) listenForMesssage() (err error) {
 // to a message
 func (c *connection) processPacket(b []byte) {
 	m := c.distributedWorker.NewMessage()
-	json.Unmarshal(b, m)
+
+	mp := c.distributedWorker.processPool.messagePool.messageProtoPool.get().(*MessageProto)
+	proto.Unmarshal(b, mp)
+
+	m.fromProto(mp)
 
 	c.distributedWorker.handleMessageForConnection(m, c)
 }

@@ -20,48 +20,52 @@
 
 package gridworker
 
+import (
+	"github.com/golang/protobuf/proto"
+)
+
 //
 // Message Getters
 //
 
 // getInterface gets an object from the argument map
-func (m *Message) getInterface(key string) interface{} {
-	return m.Arguments[key]
+func (m *Message) getInterface(key string) *DynamicType {
+	return m.arguments[key]
 }
 
 // GetString returns a string for a specific key in the argument map
 func (m *Message) GetString(key string) string {
-	return m.getInterface(key).(string)
+	return m.getInterface(key).GetStr()
 }
 
 // GetInt64 returns a int64 for a specific key in the argument map
 func (m *Message) GetInt64(key string) int64 {
-	return int64(m.getInterface(key).(float64))
+	return m.getInterface(key).GetInt()
 }
 
 // GetFloat64 returns a float64 for a specific key in the argument map
 func (m *Message) GetFloat64(key string) float64 {
-	return m.getInterface(key).(float64)
+	return m.getInterface(key).GetFloat()
 }
 
 // GetBool returns a bool for a specific key in the argument map
 func (m *Message) GetBool(key string) bool {
-	return m.getInterface(key).(bool)
+	return m.getInterface(key).GetBool()
 }
 
 // GetBytes returns a byte for a specific key in the argument map
 func (m *Message) GetBytes(key string) []byte {
-	return m.getInterface(key).([]byte)
+	return m.getInterface(key).GetBytes()
 }
 
 // GetMap returns a map for a specific key in the argument map
 func (m *Message) GetMap(key string) map[string]interface{} {
-	return m.getInterface(key).(map[string]interface{})
+	return m.getInterface(key).GetMap()
 }
 
 // GetSlice returns a slice for a specific key in the argument map
 func (m *Message) GetSlice(key string) []interface{} {
-	return m.getInterface(key).([]interface{})
+	return m.getInterface(key).GetSlice()
 }
 
 //
@@ -69,43 +73,62 @@ func (m *Message) GetSlice(key string) []interface{} {
 //
 
 // setInterface sets an object in the argument map
-func (m *Message) setInterface(key string, value interface{}) {
-	m.Arguments[key] = value
+func (m *Message) setInterface(key string, value *DynamicType) {
+	m.arguments[key] = value
 }
 
 // SetString sets a string in the argument map
 func (m *Message) SetString(key string, value string) {
-	m.setInterface(key, value)
+	v := DynamicType{}
+	v.Str = proto.String(value)
+	v.SetType(DynamicTypeType_string)
+	m.setInterface(key, &v)
 }
 
 // SetInt64 sets a int64 in the argument map
 func (m *Message) SetInt64(key string, value int64) {
-	m.setInterface(key, float64(value))
+	v := DynamicType{}
+	v.Int = proto.Int64(value)
+	v.SetType(DynamicTypeType_int)
+	m.setInterface(key, &v)
 }
 
 // SetFloat64 sets a float64 in the argument map
 func (m *Message) SetFloat64(key string, value float64) {
-	m.setInterface(key, value)
+	v := DynamicType{}
+	v.Float = proto.Float64(value)
+	v.SetType(DynamicTypeType_float)
+	m.setInterface(key, &v)
 }
 
 // SetBool sets a bool in the argument map
 func (m *Message) SetBool(key string, value bool) {
-	m.setInterface(key, value)
+	v := DynamicType{}
+	v.Bool = proto.Bool(value)
+	v.SetType(DynamicTypeType_bool)
+	m.setInterface(key, &v)
 }
 
 // SetBytes sets a bytes slice in the argument map
 func (m *Message) SetBytes(key string, value []byte) {
-	m.setInterface(key, value)
+	v := DynamicType{}
+	v.Bytes = value
+	v.SetType(DynamicTypeType_bytes)
+	m.setInterface(key, &v)
 }
 
 // SetMap sets a map in the argument map
 func (m *Message) SetMap(key string, value map[string]interface{}) {
-	m.setInterface(key, value)
+	v := DynamicType{}
+	v.SetMap(value)
+	m.setInterface(key, &v)
 }
 
 // SetSlice sets a slice in the argument map
 func (m *Message) SetSlice(key string, value []interface{}) {
-	m.setInterface(key, value)
+	v := DynamicType{}
+	v.SetSlice(value)
+	m.setInterface(key, &v)
 }
 
 //
